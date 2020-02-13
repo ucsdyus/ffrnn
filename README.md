@@ -8,6 +8,9 @@
 * Pytorch
     * [libtorch](https://pytorch.org/cppdocs/installing.html)
     * [C++ Extentions](https://pytorch.org/tutorials/advanced/cpp_extension.html)
+    * [Tensor Basics](https://pytorch.org/cppdocs/notes/tensor_basics.html)
+    * [Tensor C++ template](https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/templates/TensorBody.h)
+
     
 
 ## Useful Command
