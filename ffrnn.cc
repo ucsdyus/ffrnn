@@ -104,7 +104,7 @@ at::Tensor th_ball2cube(at::Tensor r) {
     return cube;
 }
 
-inline bool inside(int i, int j, int k) {
+inline bool inside_grid(int i, int j, int k) {
     return i >= 0 && j >= 0 && k >= 0 && i < kernel_size && j < kernel_size && k < kernel_size;
 }
 
@@ -112,15 +112,16 @@ inline float trilinear_w(float d, int b) {
     return b * d + (1 - b) * (1 - d);
 }
 
-at::Tensor th_ball2grid(at::Tensor r) {
+inline at::Tensor th_weighted_ball2grid(at::Tensor r, float smooth_weight) {
+    
     // kernel_size = kernel_size * kernel_size * kernel_size;
 
     float h[3];
     ball2cube(r.data_ptr<float>(), h);
     // std::cout << "h: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
-    h[0] *= kernel_size;
-    h[1] *= kernel_size;
-    h[2] *= kernel_size;
+    h[0] *= (kernel_size - 1);
+    h[1] *= (kernel_size - 1);
+    h[2] *= (kernel_size - 1);
     
     at::Tensor grid = torch::zeros(kernel_size * kernel_size * kernel_size, r.options());
     float* grid_data = grid.data_ptr<float>();
@@ -129,6 +130,7 @@ at::Tensor th_ball2grid(at::Tensor r) {
     #pragma unroll
     for (int i = 0; i < 3; ++i) {
         idx[i] = static_cast<int>(floor(h[i]));
+        if (idx[i] == kernel_size - 1) --idx[i];
         dx[i] = h[i] - idx[i];
     }
 
@@ -145,14 +147,30 @@ at::Tensor th_ball2grid(at::Tensor r) {
         int j = idx[1] + fj[t];
         int k = idx[2] + fk[t];
         // std::cout << i << " " << j << " " << k << std::endl;
-        if (!inside(i, j, k)) continue;
+        // Safe to remove it.
+        // if (!inside_grid(i, j, k)) continue;
         // std::cout << "work" << i << " " << j << " " << k << std::endl;
         grid_data[i * kernel_size * kernel_size + j * kernel_size + k] = 
-            trilinear_w(dx[0], fi[t]) * trilinear_w(dx[1], fj[t]) * trilinear_w(dx[2], fk[t]);;
+            smooth_weight * trilinear_w(dx[0], fi[t]) *
+            trilinear_w(dx[1], fj[t]) * trilinear_w(dx[2], fk[t]);
     }
     return grid;
 }
 
+
+inline at::Tensor th_ball2grid(at::Tensor r) {
+    return th_weighted_ball2grid(r, /*smooth_weight=*/1.0f);
+}
+
+inline float window_smooth_weight(float* r, float R) {
+    float v = 1.0f - (r[0] * r[0] + r[1] * r[1] + r[2] * r[2]) / (R * R);
+    return v * v * v;
+}
+
+inline at::Tensor th_ball2grid_with_window(at::Tensor r, float R) {
+    // std::cout << window_smooth_weight(r.data_ptr<float>(), R) << std::endl;
+    return th_weighted_ball2grid(r, window_smooth_weight(r.data_ptr<float>(), R));
+}
 
 std::vector<NearNeighbor> bf_cpu_frnn(at::Tensor points, float R) {
     // at::Tensor is not differentiable 
@@ -165,11 +183,11 @@ std::vector<NearNeighbor> bf_cpu_frnn(at::Tensor points, float R) {
         for (int j = i + 1; j < N; ++j) {
             at::Tensor r = (points[j] - points[i]) / R;
             if (in_radius(r)) {
-                at::Tensor hij = th_ball2grid(r);
+                at::Tensor hij = th_ball2grid_with_window(r, R);
                 near_neighbor[i].first.push_back(j);
                 near_neighbor[i].second.push_back(hij);
                 
-                at::Tensor hji = th_ball2grid(-r);
+                at::Tensor hji = th_ball2grid_with_window(-r, R);
                 near_neighbor[j].first.push_back(i);
                 near_neighbor[j].second.push_back(hji);
             }
@@ -186,8 +204,15 @@ PYBIND11_MODULE(ffrnn, m)
   m.doc() = "Fast Fixed-radius Nearest Neighbor";
 
   m.def("th_ball2cube", &th_ball2cube, "Translate a ball into a cube");
+
+  
+  m.def("th_weighted_ball2grid", &th_weighted_ball2grid, 
+    "Translate a ball into grid with trilinear interpolation and smooth weights.");
   
   m.def("th_ball2grid", &th_ball2grid, "Translate a ball into grid with trilinear interpolation");
+
+  m.def("th_ball2grid_with_window", &th_ball2grid_with_window, 
+    "Translate a ball into grid with trilinear interpolation and window weights.");
 
   m.def("bf_cpu_frnn", &bf_cpu_frnn, "Brual Forch CPU ver");
 }
