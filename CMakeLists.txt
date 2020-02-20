@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
-project(example)
+project(FFRNN)
 
 # CXX FLAGS
 if(NOT CMAKE_BUILD_TYPE)

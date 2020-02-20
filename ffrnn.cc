@@ -18,7 +18,7 @@ using NeighborList = std::vector<int>;
 using WeightList = std::vector<at::Tensor>;
 using NearNeighbor = std::pair<NeighborList, WeightList>;
 
-constexpr const float PI = 3.14159265359f;
+constexpr const float PI = std::atan(1.0f) * 4.0f;
 constexpr const int kernel_size = 4;
 
 
@@ -34,14 +34,17 @@ inline void ball2cyl(float x, float y, float z, float& rx, float& ry, float& rz)
         rx = ry = rz = 0;
         return;
     }
-    float rt_x2_y2_z2 = sqrt(x2_y2_z2);
+    float rt_x2_y2_z2 = std::sqrt(x2_y2_z2);
+    // std::cout << "rt_x2_y2_z2: " << rt_x2_y2_z2 << std::endl;
     if (5.0f / 4.0f * z2 <= x2_y2) {
-        float p = rt_x2_y2_z2 / sqrt(x2_y2);
+        // std::cout << "ball2cyl: " << "case 2" << std::endl; 
+        float p = rt_x2_y2_z2 / std::sqrt(x2_y2);
         rx = x * p;
         ry = y * p;
         rz = 3.0f / 2.0f * z;
     } else {
-        float p = sqrt(3.0f * rt_x2_y2_z2 / (rt_x2_y2_z2 + abs(z)));
+        // std::cout << "ball2cyl: " << "case 3" << std::endl;
+        float p = std::sqrt((3.0f * rt_x2_y2_z2) / (rt_x2_y2_z2 + std::abs(z)));
         rx = x * p;
         ry = y * p;
         if (z > 0) rz = rt_x2_y2_z2;
@@ -56,36 +59,49 @@ inline void cyl2cube(float x, float y, float z, float& rx, float& ry, float& rz)
         rz = z;
         return;
     }
-    float rt_x2_y2 = sqrt(x * x + y * y);
-    if (abs(y) <= abs(x)) {
-        if (x > 0) rx = rt_x2_y2;
-        else rx = -rt_x2_y2;
+    float rt_x2_y2 = std::sqrt(x * x + y * y);
+    if (std::abs(y) <= std::abs(x)) {
+        // std::cout << "cyl2cube: " << "case 2" << std::endl; 
+        if (x > 0) {
+            rx = rt_x2_y2;
+            ry = rx * std::atan2(y, x) * 4.0f / PI;
+        } else {
+            rx = -rt_x2_y2;
+            ry = rx * std::atan2(-y, -x) * 4.0f / PI;
+        }
 
-        ry = rx * atan2(y, x) * 4.0f / PI;
         rz = z;
         
     } else {
-        if (y > 0) ry = rt_x2_y2;
-        else ry = -rt_x2_y2;
-
-        rx = ry * atan2(x, y) * 4.0f / PI;
+        // std::cout << "cyl2cube: " << "case 3" << std::endl; 
+        if (y > 0) {
+            ry = rt_x2_y2;
+            rx = ry * std::atan2(x, y) * 4.0f / PI;
+        } else {
+            ry = -rt_x2_y2;
+            rx = ry * std::atan2(-x, -y) * 4.0f / PI;
+        }
         rz = z;
     }
 }
 
 inline void ball2cube(float* r_ptr, float* h_ptr) {
     float rx, ry, rz;
+    // std::cout << "ball: " << r_ptr[0] << " " << r_ptr[1] << " " << r_ptr[2] << std::endl;
     ball2cyl(r_ptr[0], r_ptr[1], r_ptr[2], rx, ry, rz);
+    // std::cout << "cyl: " << rx << " " << ry << " " << rz << std::endl;
     cyl2cube(rx, ry, rz, h_ptr[0], h_ptr[1], h_ptr[2]);
-    h_ptr[0] = (h_ptr[0] + 1.0f) / 2.0f;
-    h_ptr[1] = (h_ptr[1] + 1.0f) / 2.0f;
-    h_ptr[2] = (h_ptr[2] + 1.0f) / 2.0f;
+    // std::cout << "cube: " << h_ptr[0] << " " << h_ptr[1] << " " << h_ptr[2] << std::endl;
+    #pragma unroll
+    for (int i = 0; i < 3; ++i) {
+        h_ptr[i] = (h_ptr[i] + 1.0f) / 2.0f;
+    }
 }
 
 at::Tensor th_ball2cube(at::Tensor r) {
-    at::Tensor grid = torch::zeros_like(r);
-    ball2cube(r.data_ptr<float>(), grid.data_ptr<float>());
-    return grid;
+    at::Tensor cube = torch::zeros_like(r);
+    ball2cube(r.data_ptr<float>(), cube.data_ptr<float>());
+    return cube;
 }
 
 inline bool inside(int i, int j, int k) {
@@ -96,34 +112,41 @@ inline float trilinear_w(float d, int b) {
     return b * d + (1 - b) * (1 - d);
 }
 
-at::Tensor th_ball2gird(at::Tensor r) {
+at::Tensor th_ball2grid(at::Tensor r) {
     // kernel_size = kernel_size * kernel_size * kernel_size;
 
     float h[3];
     ball2cube(r.data_ptr<float>(), h);
-    std::cout << "h: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
+    // std::cout << "h: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
     h[0] *= kernel_size;
     h[1] *= kernel_size;
     h[2] *= kernel_size;
     
     at::Tensor grid = torch::zeros(kernel_size * kernel_size * kernel_size, r.options());
     float* grid_data = grid.data_ptr<float>();
-    int idx[3] = {static_cast<int>(h[0]), static_cast<int>(h[1]), static_cast<int>(h[2])};
-    float dx[3] = {h[0] - idx[0], h[1] - idx[1], h[2] - idx[2]};
+    int idx[3];
+    float dx[3]; 
+    #pragma unroll
+    for (int i = 0; i < 3; ++i) {
+        idx[i] = static_cast<int>(floor(h[i]));
+        dx[i] = h[i] - idx[i];
+    }
+
     int fi[] = {0, 1, 1, 0, 0, 1, 1, 0};
     int fj[] = {0, 0, 1, 1, 0, 0, 1, 1};
     int fk[] = {0, 0, 0, 0, 1, 1, 1, 1};
 
-    std::cout << "h * size: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
-    std::cout << "idx[]: " << idx[0] << " " << idx[1] << " " << idx[2] << std::endl;
+    // std::cout << "h * size: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
+    // std::cout << "idx[]: " << idx[0] << " " << idx[1] << " " << idx[2] << std::endl;
 
-#pragma unroll
+    #pragma unroll
     for (int t = 0; t < 8; ++t) {
         int i = idx[0] + fi[t];
         int j = idx[1] + fj[t];
         int k = idx[2] + fk[t];
-        std::cout << i << " " << j << " " << k << std::endl;
+        // std::cout << i << " " << j << " " << k << std::endl;
         if (!inside(i, j, k)) continue;
+        // std::cout << "work" << i << " " << j << " " << k << std::endl;
         grid_data[i * kernel_size * kernel_size + j * kernel_size + k] = 
             trilinear_w(dx[0], fi[t]) * trilinear_w(dx[1], fj[t]) * trilinear_w(dx[2], fk[t]);;
     }
@@ -142,11 +165,11 @@ std::vector<NearNeighbor> bf_cpu_frnn(at::Tensor points, float R) {
         for (int j = i + 1; j < N; ++j) {
             at::Tensor r = (points[j] - points[i]) / R;
             if (in_radius(r)) {
-                at::Tensor hij = th_ball2gird(r);
+                at::Tensor hij = th_ball2grid(r);
                 near_neighbor[i].first.push_back(j);
                 near_neighbor[i].second.push_back(hij);
                 
-                at::Tensor hji = th_ball2gird(-r);
+                at::Tensor hji = th_ball2grid(-r);
                 near_neighbor[j].first.push_back(i);
                 near_neighbor[j].second.push_back(hji);
             }
@@ -163,6 +186,8 @@ PYBIND11_MODULE(ffrnn, m)
   m.doc() = "Fast Fixed-radius Nearest Neighbor";
 
   m.def("th_ball2cube", &th_ball2cube, "Translate a ball into a cube");
+  
+  m.def("th_ball2grid", &th_ball2grid, "Translate a ball into grid with trilinear interpolation");
 
   m.def("bf_cpu_frnn", &bf_cpu_frnn, "Brual Forch CPU ver");
 }
