@@ -7,6 +7,9 @@
     * [Official Doc](https://pybind11.readthedocs.io/en/stable/basics.html)
 * Pytorch
     * [libtorch install](https://pytorch.org/cppdocs/installing.html): No Longer Need, Use setuptool and virtualenv instead
+    * [pytorch setuptools](https://pytorch.org/docs/stable/cpp_extension.html)
+        * Not initialization error: constexpr => const
+        * pybind cast incomplete pointer error : *(this->value) => *((type *)(this->value)) [link](https://github.com/pytorch/pytorch/issues/11004)
     * [C++ Extentions](https://pytorch.org/tutorials/advanced/cpp_extension.html): Use setuptool insteas of Cmake
     * [Python Extentions](https://pytorch.org/docs/stable/notes/extending.html)
     * [Tensor Basics](https://pytorch.org/cppdocs/notes/tensor_basics.html)
