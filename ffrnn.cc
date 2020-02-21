@@ -18,8 +18,8 @@ using NeighborList = std::vector<int>;
 using WeightList = std::vector<at::Tensor>;
 using NearNeighbor = std::pair<NeighborList, WeightList>;
 
-constexpr const float PI = std::atan(1.0f) * 4.0f;
-constexpr const int kernel_size = 4;
+const float PI = std::atan(1.0f) * 4.0f;
+const int kernel_size = 4;
 
 
 inline bool in_radius(at::Tensor r) {
@@ -205,7 +205,6 @@ PYBIND11_MODULE(ffrnn, m)
 
   m.def("th_ball2cube", &th_ball2cube, "Translate a ball into a cube");
 
-  
   m.def("th_weighted_ball2grid", &th_weighted_ball2grid, 
     "Translate a ball into grid with trilinear interpolation and smooth weights.");
   
