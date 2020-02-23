@@ -22,7 +22,7 @@ for i in range(T):
     print("|r|", i, "=", torch.dot(x[i], x[i]), x[i])
     h[i] = ffrnn.th_ball2cube(x[i])
     g[i] = ffrnn.th_ball2grid(x[i])
-    g_win[i] = ffrnn.th_ball2grid_with_window(x[i], R)
+    g_win[i] = ffrnn.th_ball2grid_with_window(x[i])
     print(torch.norm(h_gt[i] - h[i]))
 
 print("Ball")

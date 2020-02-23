@@ -13,13 +13,17 @@ extern inline void cyl2cube(float x, float y, float z, float& rx, float& ry, flo
 
 extern inline void ball2cube(float* r_ptr, float* h_ptr);
 
-extern inline at::Tensor th_ball2cube(at::Tensor r);
+extern inline void weighted_ball2grid(float* r_ptr, float* grid_ptr, float smooth_weight);
 
-extern inline at::Tensor th_ball2grid(at::Tensor r);
+extern inline void ball2grid_with_window(float* r_ptr, float* grid_ptr);
 
-extern inline at::Tensor th_weighted_ball2grid(at::Tensor r, float smooth_weight);
+extern inline torch::Tensor th_ball2cube(torch::Tensor r);
 
-extern inline at::Tensor th_ball2grid_with_window(at::Tensor r, float R);
+extern inline torch::Tensor th_ball2grid(torch::Tensor r);
+
+extern inline torch::Tensor th_weighted_ball2grid(torch::Tensor r, float smooth_weight);
+
+extern inline torch::Tensor th_ball2grid_with_window(torch::Tensor r);
 
 }  // namespace ffrnn
 

@@ -11,7 +11,7 @@
 
 namespace ffrnn {
 
-std::vector<NearNeighbor> bf_cpu(at::Tensor points, float R);
+NnList_t bf_cpu(torch::Tensor points, float R);
 
 }  // namespace ffrnn
 
