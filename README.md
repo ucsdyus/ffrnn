@@ -32,3 +32,4 @@
 4. ```NAME/Scripts/activate```
 5. ```deactivate```
 6. ```python setup.py install```
+7. ```git push -u origin NewBranchName```
