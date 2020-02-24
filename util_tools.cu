@@ -3,7 +3,7 @@
 
 namespace ffrnn {
 
-__hd__ inline void SANITY_CHECK(at::Tensor points) {
+__hd__ void SANITY_CHECK(at::Tensor points) {
     assert(at::size(points, 1) == 3);
 }
 

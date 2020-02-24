@@ -7,7 +7,7 @@
 
 namespace ffrnn {
 
-extern inline void SANITY_CHECK(at::Tensor points);
+extern void SANITY_CHECK(at::Tensor points);
 
 }  // namespace ffrnn
 
