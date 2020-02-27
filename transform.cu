@@ -1,5 +1,8 @@
 #include "transform.h"
 #include "types.h"
+#include <cuda.h>
+#include <cmath>
+
 
 namespace ffrnn {
 

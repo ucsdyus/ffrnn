@@ -1,8 +1,6 @@
 #ifndef TRANSFORM_H_
 #define TRANSFORM_H_
 
-#include <vector>
-#include <cmath>
 #include <torch/extension.h>
 
 namespace ffrnn {
