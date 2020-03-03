@@ -15,6 +15,7 @@ setup(name="FFRNN",
       ext_modules=[CUDAExtension(
           "ffrnn", sources=cc_sources + cu_sources,
           extra_compile_args={
-              "cxx": ["/O2", "/w", "/std:c++14"],
-              "nvcc": ["-O3", "--ptxas-options=-v", "-w", "--std=c++14"]})],
+              "cxx": ["/O2", "/w"],
+            #   "cxx": ["-O3", "-w", "-std=c++11"],
+              "nvcc": ["-O3", "--ptxas-options=-v", "-w"]})],
       cmdclass={"build_ext": BuildExtension})

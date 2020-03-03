@@ -1,26 +1,29 @@
 #include "transform.h"
 #include "types.h"
+#include <cuda.h>
+#include <cmath>
+
 
 namespace ffrnn {
 
 namespace {
 
-__hd__ inline bool inside_grid(int i, int j, int k) {
+__hd__ bool inside_grid(int i, int j, int k) {
     return i >= 0 && j >= 0 && k >= 0 && i < KERNEL_SIZE && j < KERNEL_SIZE && k < KERNEL_SIZE;
 }
 
-__hd__ inline float trilinear_w(float d, int b) {
+__hd__ float trilinear_w(float d, int b) {
     return b * d + (1 - b) * (1 - d);
 }
 
-__hd__ inline float window_smooth_weight(float* r) {
+__hd__ float window_smooth_weight(float* r) {
     float v = 1.0f - (r[0] * r[0] + r[1] * r[1] + r[2] * r[2]);
     return v * v * v;
 }
 }  // namespace
 
 
-__hd__ inline void ball2cyl(float x, float y, float z, float& rx, float& ry, float& rz) {
+__hd__ void ball2cyl(float x, float y, float z, float& rx, float& ry, float& rz) {
     float x2_y2 = x * x + y * y;
     float z2 = z * z;
     float x2_y2_z2 = x2_y2 + z2;
@@ -47,7 +50,7 @@ __hd__ inline void ball2cyl(float x, float y, float z, float& rx, float& ry, flo
 }
 
 
-__hd__ inline void cyl2cube(float x, float y, float z, float& rx, float& ry, float& rz) {
+__hd__ void cyl2cube(float x, float y, float z, float& rx, float& ry, float& rz) {
     if (x == 0 && y == 0) {
         rx = ry = 0;
         rz = z;
@@ -79,7 +82,7 @@ __hd__ inline void cyl2cube(float x, float y, float z, float& rx, float& ry, flo
     }
 }
 
-__hd__ inline void ball2cube(float* r_ptr, float* h_ptr) {
+__hd__ void ball2cube(float* r_ptr, float* h_ptr) {
     float rx, ry, rz;
     // std::cout << "ball: " << r_ptr[0] << " " << r_ptr[1] << " " << r_ptr[2] << std::endl;
     ball2cyl(r_ptr[0], r_ptr[1], r_ptr[2], rx, ry, rz);
@@ -92,7 +95,7 @@ __hd__ inline void ball2cube(float* r_ptr, float* h_ptr) {
     }
 }
 
-__hd__ inline void weighted_ball2grid(float* r_ptr, float* grid_ptr, float smooth_weight) {
+__hd__ void weighted_ball2grid(float* r_ptr, float* grid_ptr, float smooth_weight) {
     float h[3];
     ball2cube(r_ptr, h);
     // std::cout << "h: " << h[0] << " " << h[1] << " " << h[2] << std::endl;
@@ -131,29 +134,29 @@ __hd__ inline void weighted_ball2grid(float* r_ptr, float* grid_ptr, float smoot
     }
 }
 
-__hd__ inline void ball2grid_with_window(float* r_ptr, float* grid_ptr) {
+__hd__ void ball2grid_with_window(float* r_ptr, float* grid_ptr) {
     // std::cout << "r_ptr: " << r_ptr[0] << " " << r_ptr[1] << " " << r_ptr[3] << std::endl;
     // std::cout << window_smooth_weight(r_ptr) << std::endl;
     weighted_ball2grid(r_ptr, grid_ptr, window_smooth_weight(r_ptr));
 }
 
-__hd__ inline torch::Tensor th_ball2cube(torch::Tensor r) {
+__hd__ torch::Tensor th_ball2cube(torch::Tensor r) {
     torch::Tensor cube = torch::zeros_like(r);
     ball2cube(r.data_ptr<float>(), cube.data_ptr<float>());
     return cube;
 }
 
-__hd__ inline torch::Tensor th_weighted_ball2grid(torch::Tensor r, float smooth_weight) {
+__hd__ torch::Tensor th_weighted_ball2grid(torch::Tensor r, float smooth_weight) {
     torch::Tensor grid = torch::zeros(SPATIAL_SIZE, r.options());
     weighted_ball2grid(r.data_ptr<float>(), grid.data_ptr<float>(), smooth_weight);
     return grid;
 }
 
-__hd__ inline torch::Tensor th_ball2grid(torch::Tensor r) {
+__hd__ torch::Tensor th_ball2grid(torch::Tensor r) {
     return th_weighted_ball2grid(r, /*smooth_weight=*/1.0f);
 }
 
-__hd__ inline torch::Tensor th_ball2grid_with_window(torch::Tensor r) {
+__hd__ torch::Tensor th_ball2grid_with_window(torch::Tensor r) {
     // std::cout << window_smooth_weight(r.data_ptr<float>()) << std::endl;
     return th_weighted_ball2grid(r, window_smooth_weight(r.data_ptr<float>()));
 }

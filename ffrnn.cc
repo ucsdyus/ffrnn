@@ -11,7 +11,13 @@
 
 namespace ffrnn {
 
-NnList_t bf_cpu(torch::Tensor points, float R);
+// return: nn_offset, nn_list, nw_list, grad_nn_offset, grad_nn_list
+// nn_offset: N + 1
+// nn_list: squeeze(N x Ns)
+// nw_lsit: squeeze(N x Ns x Spatial)
+// grad_nn_offset: N + 1 (should be the same as nn_offset)
+// grad_nn_lsit: squeeze(N x Ns x 2: <v, v_offset>)
+std::vector<at::Tensor> bf_cpu(torch::Tensor points, float R);
 
 }  // namespace ffrnn
 
