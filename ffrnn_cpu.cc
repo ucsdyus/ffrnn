@@ -15,21 +15,23 @@ inline bool in_radius(torch::Tensor r) {
 
 }  // namespace
 
-std::vector<at::Tensor> bf_cpu(torch::Tensor points, float R) {
+std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, float R, bool include_diag) {
     
-    int N = torch::size(points, 0);
+    int N = torch::size(sources, 0);
+    int M = torch::size(candidates, 0);
     std::vector<std::vector<int>> nn_table(N);
 
     for (int i = 0; i < N; ++i) {
-        for (int j = i + 1; j < N; ++j) {
-            torch::Tensor r = (points[j] - points[i]) / R;
-            if (in_radius(r)) {
-                nn_table[i].push_back(j);
-                nn_table[j].push_back(i);
+        for (int j = 0; j < M; ++j) {
+            if(include_diag || i != j) {
+                torch::Tensor r = (candidates[j] - sources[i]) / R;
+                if (in_radius(r)) {
+                    nn_table[i].push_back(j);
+                }
             }
         }
     }
-    auto th_option = points.options();
+    auto th_option = sources.options();
     torch::Tensor th_nn_offset = torch::zeros(
         N + 1, th_option.dtype(torch::kInt32));
     int* nn_offset = th_nn_offset.data_ptr<int>();
@@ -60,7 +62,7 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor points, float R) {
             int v = nn_table[u][i];
             nn[i] = v;
             // std::cout << "u, v: " << u << " " << v << std::endl;
-            torch::Tensor r = (points[v] - points[u]) / R;
+            torch::Tensor r = (candidates[v] - sources[u]) / R;
             // std::cout << "r tesnor" << r << " R: " << R << std::endl; 
             ball2grid_with_window(r.data_ptr<float>(), nw + i * SPATIAL_SIZE);
             int start = (nn_offset[v] + grad_nn_offset[v + 1]) * 2;
@@ -74,5 +76,4 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor points, float R) {
     }
     return {th_nn_offset, th_nn_list, th_nw_list, th_grad_nn_offset, th_grad_nn_list};
 }
-
 }  // namespace ffrnn

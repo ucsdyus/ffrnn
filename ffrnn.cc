@@ -11,13 +11,26 @@
 
 namespace ffrnn {
 
+// API:
+// sources: N Points which we want to find neighbors for
+// candidates: M  Candidate set where we find neighbors
+// R: radius
+// include_diag: bool
 // return: nn_offset, nn_list, nw_list, grad_nn_offset, grad_nn_list
 // nn_offset: N + 1
 // nn_list: squeeze(N x Ns)
 // nw_lsit: squeeze(N x Ns x Spatial)
 // grad_nn_offset: N + 1 (should be the same as nn_offset)
 // grad_nn_lsit: squeeze(N x Ns x 2: <v, v_offset>)
-std::vector<at::Tensor> bf_cpu(torch::Tensor points, float R);
+
+// Example:
+// 1. Find neighbors for dynamic points.
+//     res = func_name(points, points, R, False)
+// 2. Find neighborhoood boundary
+//     res = func_name(points, boundary_points, R, True)
+
+std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, float R, bool include_diag);
+
 
 }  // namespace ffrnn
 
@@ -38,5 +51,5 @@ PYBIND11_MODULE(ffrnn, m) {
     "Translate a ball into grid with trilinear interpolation and window weights.");
 
     // FFRNN
-    m.def("bf_cpu", &ffrnn::bf_cpu, "Brual Forch CPU ver");
+    m.def("bf_cpu", &ffrnn::bf_cpu, "Brual Forch CPU");
 }
