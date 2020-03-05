@@ -41,11 +41,16 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
     torch::Tensor th_nn_offset = torch::zeros(
         N + 1, th_option.dtype(torch::kInt32));
     int* nn_offset = th_nn_offset.data_ptr<int>();
-    for (int i = 1; i <= N; ++i) {
-        nn_offset[i] = nn_offset[i - 1] + nn_table[i - 1].size();
-    }
+
+    // int max_nnum = 0;
+    // for (int i = 1; i <= N; ++i) {
+    //     nn_offset[i] = nn_offset[i - 1] + nn_table[i - 1].size();
+        
+    //     max_nnum = std::max(max_nnum, (int) nn_table[i - 1].size());
+    // }
 
     // std::cout << "Start Allocating: " << nn_offset[N] << " entries" << std::endl;
+    // std::cout << "Avg N Num: " << ((float) nn_offset[N] / (float) N) << " Max N Num: " << max_nnum << std::endl;
 
     torch::Tensor th_nn_list = torch::zeros(
         nn_offset[N], th_option.dtype(torch::kInt32));
