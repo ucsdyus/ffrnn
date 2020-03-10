@@ -18,7 +18,7 @@ print("SelectMat")
 for i in range(len(nn_offset) - 1):
     print("ID:", i)
     start = nn_offset[i]
-    end = nn_offset[i + 1] 
+    end = nn_offset[i + 1]
     Ns = end - start
     print(Ns, nn_list[start:end])
 

@@ -7,6 +7,7 @@
 #include <torch/extension.h>
 
 #include "types.h"
+#include "transform.h"
 
 namespace ffrnn {
 
@@ -28,16 +29,26 @@ namespace ffrnn {
 // 2. Find neighborhoood boundary
 //     res = func_name(points, boundary_points, R, True)
 
-std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, float R, bool include_diag);
+std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, float R, bool include_diag);
 
 }  // namespace ffrnn
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(ffrnn, m) {
+PYBIND11_MODULE(ffrnn_test, m) {
     m.doc() = "Fast Fixed-radius Nearest Neighbor";
 
-    // // FFRNN
+    // Transform
+    m.def("th_ball2cube", &ffrnn::th_ball2cube, "Translate a ball into a cube");
 
-    m.def("bf_gpu", &ffrnn::bf_gpu, "Brual Forch GPU");
+    m.def("th_weighted_ball2grid", &ffrnn::th_weighted_ball2grid, 
+    "Translate a ball into grid with trilinear interpolation and smooth weights.");
+
+    m.def("th_ball2grid", &ffrnn::th_ball2grid, "Translate a ball into grid with trilinear interpolation");
+
+    m.def("th_ball2grid_with_window", &ffrnn::th_ball2grid_with_window, 
+    "Translate a ball into grid with trilinear interpolation and window weights.");
+
+    // FFRNN
+    m.def("bf_cpu", &ffrnn::bf_cpu, "Brual Forch CPU");
 }

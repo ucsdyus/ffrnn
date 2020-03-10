@@ -43,11 +43,11 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
     int* nn_offset = th_nn_offset.data_ptr<int>();
 
     // int max_nnum = 0;
-    // for (int i = 1; i <= N; ++i) {
-    //     nn_offset[i] = nn_offset[i - 1] + nn_table[i - 1].size();
+    for (int i = 1; i <= N; ++i) {
+        nn_offset[i] = nn_offset[i - 1] + nn_table[i - 1].size();
         
-    //     max_nnum = std::max(max_nnum, (int) nn_table[i - 1].size());
-    // }
+        // max_nnum = std::max(max_nnum, (int) nn_table[i - 1].size());
+    }
 
     // std::cout << "Start Allocating: " << nn_offset[N] << " entries" << std::endl;
     // std::cout << "Avg N Num: " << ((float) nn_offset[N] / (float) N) << " Max N Num: " << max_nnum << std::endl;
@@ -57,7 +57,7 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
     torch::Tensor th_nw_list = torch::zeros(
         nn_offset[N] * SPATIAL_SIZE, th_option.dtype(torch::kFloat32));
     torch::Tensor th_grad_nn_offset = torch::zeros(
-        N + 1, th_option.dtype(torch::kInt32));
+        M + 1, th_option.dtype(torch::kInt32));
     torch::Tensor th_grad_nn_list = torch::zeros(
         nn_offset[N] * 2, th_option.dtype(torch::kInt32));
     
@@ -86,7 +86,7 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
             ++grad_nn_offset[v + 1];
         }
     }
-    for (int i = 1; i <= N; ++i) {
+    for (int i = 1; i <= M; ++i) {
         grad_nn_offset[i] += grad_nn_offset[i - 1];
     }
     // std::cout << "Done transform" << std::endl;
