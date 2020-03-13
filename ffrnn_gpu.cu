@@ -252,7 +252,7 @@ __global__ void neighbor_kernel(int N, int M, float R, bool include_diag,
 
         nn_list[u_offset] = J;
         grad_nn_list[v_offset * 2] = I;
-        grad_nn_list[v_offset * 2 + 1] = u_offset;
+        grad_nn_list[v_offset * 2 + 1] = u_offset - offset[I];
         
         #pragma unroll
         for (int i = 0; i < 3; ++i) {

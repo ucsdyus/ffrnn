@@ -5,7 +5,16 @@ import ffrnn_test
 
 N = 10
 R = 0.3
-points = torch.rand((N, 3))
+points = torch.tensor([[0.4862, 0.2957, 0.3388],
+        [0.9290, 0.7391, 0.1515],
+        [0.1459, 0.5053, 0.4150],
+        [0.5393, 0.8685, 0.8356],
+        [0.9538, 0.3375, 0.1379],
+        [0.8930, 0.4342, 0.8626],
+        [0.3683, 0.7003, 0.8116],
+        [0.4727, 0.7904, 0.6609],
+        [0.3455, 0.4732, 0.8694],
+        [0.6546, 0.5523, 0.5124]], dtype=torch.float32)
 
 print("Point")
 print(points)
@@ -36,3 +45,6 @@ gpu_points = points.cuda()
 gpu_res = ffrnn.bf_gpu(gpu_points, gpu_points, R, False)
 print("GPU Offset")
 print(gpu_res[0])
+print(gpu_res[1])
+print(gpu_res[3])
+print(gpu_res[4])
