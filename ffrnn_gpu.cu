@@ -266,21 +266,21 @@ std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, 
     CHECK_CUDA(sources);
     CHECK_CUDA(candidates);
 
-    std::cout << "start gpu" << std::endl;
+    // std::cout << "start gpu" << std::endl;
     int N = torch::size(sources, 0);
     int M =  torch::size(candidates, 0);
     float* X = sources.data_ptr<float>();
     float* Y = candidates.data_ptr<float>();
 
     auto th_option = sources.options();
-    std::cout << "Option: " << th_option << std::endl; 
+    // std::cout << "Option: " << th_option << std::endl; 
     
     // Allocate offset memory
     torch::Tensor th_nn_offset = torch::zeros({N + 1}, th_option.dtype(torch::kInt32));
     torch::Tensor th_grad_nn_offset = torch::zeros({M + 1}, th_option.dtype(torch::kInt32));
     int* offset = th_nn_offset.data_ptr<int>();
     int* grad_offset = th_grad_nn_offset.data_ptr<int>();
-    std::cout << "done allocate offset memory" << std::endl;
+    // std::cout << "done allocate offset memory" << std::endl;
      
     // Get nn offset and grad offset
     const dim3 block(DIM_X, DIM_Y);
@@ -313,7 +313,7 @@ std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, 
     cudaMemcpy((void*) (&total_neighbor), (void*) (offset + N), sizeof(int), cudaMemcpyDeviceToHost);
     CHECK_RUNTIME_ERROR(cudaPeekAtLastError());
 
-    std::cout << "total neighbor: " << total_neighbor << std::endl;
+    // std::cout << "total neighbor: " << total_neighbor << std::endl;
 
     torch::Tensor th_nn_list = torch::zeros(total_neighbor, th_option.dtype(torch::kInt32));
     torch::Tensor th_nw_list = torch::zeros(total_neighbor * SPATIAL_SIZE, th_option.dtype(torch::kFloat32));
@@ -336,7 +336,7 @@ std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, 
     cudaMemset((void*) bkd_cnt, 0, M * sizeof(int));
     CHECK_RUNTIME_ERROR(cudaPeekAtLastError());
 
-    std::cout << "done allocation" << std::endl;
+    // std::cout << "done allocation" << std::endl;
 
     // Get neighbor and grad neighbor
     neighbor_kernel<<< grid, block >>>(
@@ -344,7 +344,7 @@ std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, 
         fwd_cnt, bkd_cnt, nn_list, nw_list, grad_nn_list);
     CHECK_RUNTIME_ERROR(cudaPeekAtLastError());
 
-    std::cout << "done get neighbor" << std::endl;
+    // std::cout << "done get neighbor" << std::endl;
 
     // Release counter memory
     cudaFree((void*) fwd_cnt);
@@ -352,7 +352,7 @@ std::vector<at::Tensor> bf_gpu(torch::Tensor sources, torch::Tensor candidates, 
     cudaFree((void*) bkd_cnt);
     CHECK_RUNTIME_ERROR(cudaPeekAtLastError());
     
-    std::cout << "done release memory" << std::endl;
+    // std::cout << "done release memory" << std::endl;
     cudaDeviceSynchronize();
     CHECK_RUNTIME_ERROR(cudaPeekAtLastError());
     return {th_nn_offset, th_nn_list, th_nw_list, th_grad_nn_offset, th_grad_nn_list};
