@@ -20,6 +20,7 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
     int N = torch::size(sources, 0);
     int M = torch::size(candidates, 0);
     std::vector<std::vector<int>> nn_table(N);
+    // std::cout << "Start" << std::endl;
 
     for (int i = 0; i < N; ++i) {
         for (int j = 0; j < M; ++j) {
@@ -31,27 +32,41 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
             }
         }
     }
+    // std::cout << "Done Matching." << std::endl;
+    // for (int i = 0; i < N; ++i) {
+    //     std::cout << i << " neighbor size " << nn_table[i].size() << std::endl;
+    // }
+
     auto th_option = sources.options();
     torch::Tensor th_nn_offset = torch::zeros(
         N + 1, th_option.dtype(torch::kInt32));
     int* nn_offset = th_nn_offset.data_ptr<int>();
+
+    // int max_nnum = 0;
     for (int i = 1; i <= N; ++i) {
         nn_offset[i] = nn_offset[i - 1] + nn_table[i - 1].size();
+        
+        // max_nnum = std::max(max_nnum, (int) nn_table[i - 1].size());
     }
 
+    // std::cout << "Start Allocating: " << nn_offset[N] << " entries" << std::endl;
+    // std::cout << "Avg N Num: " << ((float) nn_offset[N] / (float) N) << " Max N Num: " << max_nnum << std::endl;
+
     torch::Tensor th_nn_list = torch::zeros(
-        N * nn_offset[N], th_option.dtype(torch::kInt32));
+        nn_offset[N], th_option.dtype(torch::kInt32));
     torch::Tensor th_nw_list = torch::zeros(
-        N * nn_offset[N] * SPATIAL_SIZE, th_option.dtype(torch::kFloat32));
+        nn_offset[N] * SPATIAL_SIZE, th_option.dtype(torch::kFloat32));
     torch::Tensor th_grad_nn_offset = torch::zeros(
-        N + 1, th_option.dtype(torch::kInt32));
+        M + 1, th_option.dtype(torch::kInt32));
     torch::Tensor th_grad_nn_list = torch::zeros(
-        N * nn_offset[N] * 2, th_option.dtype(torch::kInt32));
+        nn_offset[N] * 2, th_option.dtype(torch::kInt32));
     
     int* nn_list = th_nn_list.data_ptr<int>();
     float* nw_list = th_nw_list.data_ptr<float>();
     int* grad_nn_offset = th_grad_nn_offset.data_ptr<int>();
     int* grad_nn_list = th_grad_nn_list.data_ptr<int>();
+
+    // std::cout << "Done Allocate " << N << std::endl;
     
     for(int u = 0; u < N; ++u) {
         int Ns = nn_offset[u + 1] - nn_offset[u];
@@ -71,9 +86,10 @@ std::vector<at::Tensor> bf_cpu(torch::Tensor sources, torch::Tensor candidates, 
             ++grad_nn_offset[v + 1];
         }
     }
-    for (int i = 1; i <= N; ++i) {
+    for (int i = 1; i <= M; ++i) {
         grad_nn_offset[i] += grad_nn_offset[i - 1];
     }
+    // std::cout << "Done transform" << std::endl;
     return {th_nn_offset, th_nn_list, th_nw_list, th_grad_nn_offset, th_grad_nn_list};
 }
 }  // namespace ffrnn
